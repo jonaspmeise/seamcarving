@@ -52,6 +52,7 @@ public class SeamCarving {
 		int[] minSeam = new int[0];
 		
 		//TODO: Optimize Source Code for vertical/horizontal here
+		//would be possible, but would be very unreadable and too abstract to understand, so just copying
 		
 		if(seamType==SeamTypes.VERTICAL) {
 			for(int x = 0;x < width;x++) weightings[x][0] = energyMatrix[x][0];
@@ -213,6 +214,7 @@ public class SeamCarving {
 	
 	public void removeSeams(int x, int y) {
 		//TODO: Optimize Source Code for vertical/horizontal here
+		//would be possible, but no real point because we just have 2 cases
 		
 		for(int i=0;i<x;i++) {
 			removeSeamFromMatrix(findOptimalSeam(energyMatrix, SeamTypes.VERTICAL), SeamTypes.VERTICAL);
@@ -248,6 +250,7 @@ public class SeamCarving {
 	public void removeSeamFromMatrix(int[] verticalSeam, SeamTypes seamType) {
 		Color[][] newMatrix = matrix;
 		//TODO: Optimize Source Code for vertical/horizontal here
+		//would be possible, but no real point because we just have 2 cases
 		
 		if(seamType==SeamTypes.VERTICAL) {
 			newMatrix = new Color[width-1][height];

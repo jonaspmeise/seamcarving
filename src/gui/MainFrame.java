@@ -1,107 +1,200 @@
 package gui;
 
 import java.awt.Color;
+import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JSpinner;
 import javax.swing.JTextField;
+import javax.swing.SpinnerModel;
+import javax.swing.SpinnerNumberModel;
 
 import logic.ImageHandler;
 import logic.SeamCarving;
 
 public class MainFrame extends javax.swing.JFrame{
+	public BufferedImage currentPicture;
+	public String imagePath;
+	public JSpinner spinnerX, spinnerY;
+	public JLabel picLabel;
+	
 	public static void main(String[] args) {
-	    // TODO code application logic here
-		MainFrame thisFrame = new MainFrame();
-		thisFrame.execute();
+    	MainFrame thisFrame = new MainFrame();
 		
+    	//boot per command line
+	    if(args.length > 0) {
+			ImageHandler ih = new ImageHandler();
+			
+			SeamCarving sc = new SeamCarving(ih.imageToArray(ih.fetchImage(args[0])));
+			sc.generateEnergyMatrix();
+
+			sc.removeSeams(Integer.valueOf(args[1]), Integer.valueOf(args[2]));
+			
+			String outputPath = args[0] + "seamcarving_" + args[1] + "_" + args[2] + ".png";
+			
+    		try {
+				ImageIO.write(sc.bounceImage(), "png", new File(outputPath));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+	    } else {
+			thisFrame.execute();
+	    }
+	}
+	
+	public void convert() {
 		ImageHandler ih = new ImageHandler();
-		BufferedImage image = ih.fetchImage("C:\\Users\\Jonas Meise\\eclipse-workspace\\SeamCarving\\test3.png");
-		Color[][] matrix = ih.imageToArray(image);
+		//BufferedImage image = ih.fetchImage(imagePath);
+		Color[][] matrix = ih.imageToArray(currentPicture);
 		
 		SeamCarving sc = new SeamCarving(matrix);
 		sc.generateEnergyMatrix();
-		int[] optimalSeam = sc.findOptimalSeam(sc.getEnergyMatrix(), SeamCarving.SeamTypes.VERTICAL);
-		
-		for(int y=0;y < optimalSeam.length;y++) {
-			//System.out.println(optimalSeam[y] + "," + y);
-			image.setRGB(optimalSeam[y], y, getIntFromColor(255, 0, 0));
-		}
-		
-		try {
-			ImageIO.write(image, "jpg", new File("XD.jpg"));
-			
-			int k  = 300;
-			int j = 0;
-			sc.removeSeams(k, j);
-			ImageIO.write(sc.bounceImage(), "jpg", new File("XD_" + k + ".jpg"));
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public static int getIntFromColor(int Red, int Green, int Blue){
-	    Red = (Red << 16) & 0x00FF0000; //Shift red 16-bits and mask out other stuff
-	    Green = (Green << 8) & 0x0000FF00; //Shift Green 8-bits and mask out other stuff
-	    Blue = Blue & 0x000000FF; //Mask out anything not blue.
 
-	    return 0xFF000000 | Red | Green | Blue; //0xFF000000 for 100% Alpha. Bitwise OR everything together.
+		sc.removeSeams((int)spinnerX.getValue(), (int)spinnerY.getValue());
+		currentPicture = scaledDownVersion(sc.bounceImage());
+		
+		picLabel.setIcon(new ImageIcon(currentPicture));
 	}
 	
 	public void execute() {
 	    MainFrame frame=new MainFrame();
 	    frame.initComponents();
-	    frame.setTitle("Word Cloud");
-	    frame.setSize(1000, 620);
-	    frame.setResizable(false);
+	    frame.setTitle("Seam Carving");
+	    frame.setSize(1600, 900);
+	    frame.setResizable(true);
 	    frame.setLocation(50, 50);
 	    frame.setVisible(true);
-
+	}
+	
+	public BufferedImage scaledDownVersion(BufferedImage currentPicture) {
+		double width = currentPicture.getWidth();
+		double height = currentPicture.getHeight();
+		
+		//damit das Bild nicht aus dem Rahmen platzt 
+		double max_x = 1400, max_y = 788;
+		double rescaleFactor = 1;
+		
+		if(width > max_x) {
+			rescaleFactor = max_x / width;
+		}
+		if(height > (rescaleFactor*max_y)) {
+			rescaleFactor = (rescaleFactor*max_y) / height;
+		}
+		
+		System.out.println("Scaled down from " + width + "," + height + " -> " + rescaleFactor*width + "," + rescaleFactor*height + " (Factor: " + rescaleFactor + ")");
+		
+		Image scaledImage = currentPicture.getScaledInstance((int)(rescaleFactor*width), (int)(rescaleFactor*height), java.awt.Image.SCALE_SMOOTH);
+		
+		BufferedImage returnImage = new BufferedImage(scaledImage.getWidth(null), scaledImage.getHeight(null), BufferedImage.TYPE_INT_RGB);
+		returnImage.getGraphics().drawImage(scaledImage, 0, 0, null);
+		
+		return returnImage;
 	}
 	
 	private void initComponents() {
-        JButton jButton1 = new javax.swing.JButton();
-        JButton jButton2 = new javax.swing.JButton();
-        JButton jButton3 = new javax.swing.JButton();
-        JButton jButton4 = new javax.swing.JButton();
-        JButton jButton5 = new javax.swing.JButton();
-        JButton jButton6 = new javax.swing.JButton();
+		JTextField imageURL = new JTextField("C:\\picture.jpg", 30);
+		getContentPane().add(imageURL);
+		
+        picLabel = new JLabel();
+        add(picLabel);
         
-        JTextField textfield1 = new JTextField("Text field 1",10);
-        JTextField textfield2 = new JTextField("Text field 2",10);
-        JTextField textfield3 = new JTextField("Text field 3",10);
-        getContentPane().add(textfield1);
-        getContentPane().add(textfield2);
-        getContentPane().add(textfield3);
-       
+        JButton searchButton = new javax.swing.JButton();
+        searchButton.setText("Browse for Image File...");
+        getContentPane().add(searchButton);
+        
+        searchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JFileChooser fc = new JFileChooser();
+                
+                int returnValue = fc.showOpenDialog(null);
+                
+                if(returnValue == JFileChooser.APPROVE_OPTION) {
+                	imageURL.setText(fc.getSelectedFile().getAbsolutePath());
+                	
+                	try {
+                		currentPicture = ImageIO.read(new File(fc.getSelectedFile().getAbsolutePath()));
+						picLabel.setIcon(new ImageIcon(scaledDownVersion(currentPicture)));
+						imagePath = fc.getSelectedFile().getAbsolutePath();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+                }
+            }
+        });
+
+    	JButton loadButton = new javax.swing.JButton();
+		loadButton.setText("Load Image");
+		getContentPane().add(loadButton);
+		
+		loadButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            	try {
+            		currentPicture = ImageIO.read(new File(imageURL.getText()));
+					picLabel.setIcon(new ImageIcon(scaledDownVersion(currentPicture)));
+					imagePath = imageURL.getText();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+            }
+        });
+		
+		JButton saveButton = new javax.swing.JButton();
+		saveButton.setText("Save Image");
+		getContentPane().add(saveButton);
+		
+		saveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            	try {
+            		String outputPath = imagePath + "seamcarving_" + spinnerX.getValue() + "_" + spinnerY.getValue() + ".png";
+            		ImageIO.write(currentPicture, "png", new File(outputPath));
+            		
+            		JOptionPane.showMessageDialog(null,"Carved image has been exported to " + outputPath, "Success", JOptionPane.INFORMATION_MESSAGE);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+            }
+        });
+		
+		SpinnerModel modelX = new SpinnerNumberModel(10, 0, 1000, 1);     
+		SpinnerModel modelY = new SpinnerNumberModel(10, 0, 1000, 1);
+		spinnerX = new JSpinner(modelX);
+		spinnerY = new JSpinner(modelY);
+		
+		getContentPane().add(spinnerX);
+		getContentPane().add(spinnerY);
+		
+		
+		JButton carveButton = new javax.swing.JButton();
+		carveButton.setText("Execute Seam-Carving");
+		getContentPane().add(carveButton);
+		
+		carveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+            	convert();
+            }
+        });
+
         pack();
         setVisible(true);
  
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         getContentPane().setLayout(new java.awt.FlowLayout());
- 
-        jButton1.setText("jButton1");
-        getContentPane().add(jButton1);
- 
-        jButton2.setText("jButton2");
-        getContentPane().add(jButton2);
- 
-        jButton3.setText("jButton3");
-        getContentPane().add(jButton3);
- 
-        jButton4.setText("jButton4");
-        getContentPane().add(jButton4);
- 
-        jButton5.setText("jButton5");
-        getContentPane().add(jButton5);
- 
-        jButton6.setText("jButton6");
-        getContentPane().add(jButton6);
- 
+
         pack();
-    }
+    } 
 }
