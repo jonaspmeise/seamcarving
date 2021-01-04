@@ -23,6 +23,10 @@ import logic.ImageHandler;
 import logic.SeamCarving;
 
 public class MainFrame extends javax.swing.JFrame{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	public BufferedImage currentPicture;
 	public String imagePath;
 	public JSpinner spinnerX, spinnerY;
